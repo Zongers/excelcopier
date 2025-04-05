@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Column Copier</title>
+    <link rel="icon" href="https://i.ibb.co/W48rv8hd/icon.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #75ba1a;
+            --primary-hover: #a7bd2a;
+            --secondary: #fb0088;
+            --light: #FFFFFF;
+            --dark: #292929;
+            --bg: #F7F7F7;
+            --border: #e0e0e0;
+            --success: #4CAF50;
+            --error: #f44336;
+            --highlight: #e3f2fd;
+            --copied-color: #bd2a62;
+            --status-pink: #ffd6e7;
+            --copied-bg: #e7edd3;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .container {
+            background: var(--light);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 800px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .input-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-section label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .paste-area {
+            width: 100%;
+            height: 200px;
+            padding: 1rem;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            font-family: monospace;
+            resize: vertical;
+            background-color: white;
+        }
+
+        .paste-area:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1.3rem 1.2rem;
+            border-radius: 6px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 120px;
+            position: relative;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+
+        .btn-primary:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .btn-primary.copied {
+            background: var(--copied-color);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: var(--dark);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e0e0e0;
+        }
+
+        .btn-secondary:disabled {
+            background: #f0f0f0;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .btn-tertiary {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-tertiary:hover {
+            background: #e68a00;
+        }
+
+        .copy-status {
+            margin: 0.5rem 0;
+            padding: 0.8rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: black;
+            background-color: var(--status-pink);
+            border-radius: 6px;
+            border-left: 4px solid var(--secondary);
+            font-weight: 500;
+            display: none;
+        }
+
+        .copy-status.show {
+            display: block;
+        }
+
+        .copy-status.copied {
+            background-color: var(--copied-bg);
+            border-left-color: var(--copied-bg);
+            color: black;
+        }
+
+        .counter {
+            background-color: rgba(117,186,26,0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .counter-row {
+            display: flex;
+            margin-bottom: 0.5rem;
+        }
+
+        .counter-label {
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        .counter-value {
+            font-weight: bold;
+        }
+
+        .notification {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            background-color: var(--highlight);
+            border-left: 4px solid var(--primary);
+            display: none;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        .notification.success {
+            border-left-color: var(--success);
+        }
+
+        .notification.error {
+            border-left-color: var(--error);
+            animation: flashError 0.5s;
+        }
+
+        @keyframes flashError {
+            0% { background-color: var(--error); color: white; }
+            100% { background-color: var(--highlight); color: inherit; }
+        }
+
+        .instructions {
+            background-color: rgba(117,186,26,0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .instructions h3 {
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .instructions ul {
+            padding-left: 1.5rem;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+
+        .keyboard-shortcut {
+            display: inline-block;
+            background-color: rgba(0,0,0,0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: #888;
+            font-size: 0.9rem;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-copy"></i> Excel Copier</h1>
+        <p class="subtitle">Copy items from an Excel column one at a time</p>
+
+        <div class="input-section">
+            <label for="dataInput">Paste your Excel column data here (one item per line):</label>
+            <textarea class="paste-area" id="dataInput" placeholder="Paste your data here..."></textarea>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="copyNextBtn" disabled>
+                <i class="fas fa-arrow-right"></i> Copy Next (#0)
+            </button>
+            <button class="btn btn-secondary" id="copyBackBtn" disabled>
+                <i class="fas fa-arrow-left"></i> Copy Back
+            </button>
+            <button class="btn btn-secondary" id="startOverBtn" disabled>
+                <i class="fas fa-redo"></i> Start Over
+            </button>
+            <button class="btn btn-tertiary" id="addZerosBtn">
+                <i class="fas fa-plus-circle"></i> Add Zeros
+            </button>
+        </div>
+
+        <div class="copy-status" id="copyStatus"></div>
+
+        <div class="counter" id="counter">
+            <div class="counter-row">
+                <span class="counter-label">Current Item:</span>
+                <span class="counter-value" id="currentItem">-</span>
+            </div>
+            <div class="counter-row">
+                <span class="counter-label">Total Items:</span>
+                <span class="counter-value" id="totalItems">0</span>
+            </div>
+            <div class="counter-row">
+                <span class="counter-label">Remaining Items:</span>
+                <span class="counter-value" id="remainingItems">0</span>
+            </div>
+        </div>
+
+        <div class="notification" id="notification">
+            <span id="notificationText"></span>
+        </div>
+
+        <div class="instructions">
+            <h3><i class="fas fa-info-circle"></i> How to use this tool:</h3>
+            <ul>
+                <li>Copy a column from Excel (select the column and press Ctrl+C)</li>
+                <li>Paste the data into the text area above (Ctrl+V)</li>
+                <li>Use the <strong>Copy Next</strong> button (<span class="keyboard-shortcut">Ctrl+Enter</span>) to copy items one by one</li>
+                <li>Use the <strong>Copy Back</strong> button (<span class="keyboard-shortcut">Ctrl+Backspace</span>) to copy the previous item again</li>
+                <li>Use <strong>Start Over</strong> to reset and begin from the first item</li>
+                <li>Use <strong>Add Zeros</strong> to ensure all numbers have a leading zero and remove empty rows</li>
+                <li>The status area will show the last copied item</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        © Excel Tools 2024 | Data is processed in your browser only (not saved to server)
+    </footer>
+
+    <script>
+        // DOM elements
+        const dataInput = document.getElementById('dataInput');
+        const copyNextBtn = document.getElementById('copyNextBtn');
+        const copyBackBtn = document.getElementById('copyBackBtn');
+        const startOverBtn = document.getElementById('startOverBtn');
+        const addZerosBtn = document.getElementById('addZerosBtn');
+        const copyStatus = document.getElementById('copyStatus');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+        const currentItemDisplay = document.getElementById('currentItem');
+        const totalItemsDisplay = document.getElementById('totalItems');
+        const remainingItemsDisplay = document.getElementById('remainingItems');
+
+        // State variables
+        let items = [];
+        let currentIndex = 0;
+        let isProcessing = false;
+        let timeoutIds = [];
+
+        // Initialize the tool
+        function init() {
+            dataInput.addEventListener('input', handleInputChange);
+            copyNextBtn.addEventListener('click', copyNextItem);
+            copyBackBtn.addEventListener('click', copyPreviousItem);
+            startOverBtn.addEventListener('click', startOver);
+            addZerosBtn.addEventListener('click', addLeadingZeros);
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', handleKeyDown);
+            
+            updateUI();
+        }
+
+        // Handle changes to the input data
+        function handleInputChange() {
+            clearAllTimeouts();
+            const text = dataInput.value.trim();
+            items = text ? cleanData(text.split(/\r\n|\n|\r/)) : [];
+            currentIndex = 0;
+            isProcessing = false;
+            
+            updateUI();
+        }
+
+        // Clean data by removing empty lines and trimming whitespace
+        function cleanData(dataArray) {
+            return dataArray
+                .map(item => item.trim())
+                .filter(item => item !== '');
+        }
+
+        // Clear all active timeouts
+        function clearAllTimeouts() {
+            timeoutIds.forEach(id => clearTimeout(id));
+            timeoutIds = [];
+        }
+
+        // Copy the next item in the sequence
+        async function copyNextItem() {
+            if (isProcessing || currentIndex >= items.length) return;
+            
+            isProcessing = true;
+            copyNextBtn.classList.add('copied');
+            updateUI();
+            
+            const item = items[currentIndex];
+            
+            try {
+                await navigator.clipboard.writeText(item);
+                
+                // Show copied status
+                copyStatus.textContent = `Copied: "${item}"`;
+                copyStatus.className = 'copy-status show';
+                
+                // Change to green background after 0.7 seconds
+                timeoutIds.push(setTimeout(() => {
+                    copyStatus.classList.add('copied');
+                }, 700));
+                
+                currentIndex++;
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                showNotification('Failed to copy to clipboard. Please try again.', 'error');
+            }
+            
+            // Reset after 0.7 seconds
+            timeoutIds.push(setTimeout(() => {
+                copyNextBtn.classList.remove('copied');
+                isProcessing = false;
+                updateUI();
+            }, 700));
+        }
+
+        // Copy the previous item again
+        async function copyPreviousItem() {
+            if (isProcessing || currentIndex <= 0) return;
+            
+            isProcessing = true;
+            copyBackBtn.classList.add('copied');
+            updateUI();
+            
+            // Go back to previous item
+            currentIndex--;
+            const item = items[currentIndex];
+            
+            try {
+                await navigator.clipboard.writeText(item);
+                
+                // Show copied status
+                copyStatus.textContent = `Copied again: "${item}"`;
+                copyStatus.className = 'copy-status show';
+                
+                // Change to green background after 0.7 seconds
+                timeoutIds.push(setTimeout(() => {
+                    copyStatus.classList.add('copied');
+                }, 700));
+                
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                showNotification('Failed to copy to clipboard. Please try again.', 'error');
+                // Move forward again if copy failed
+                currentIndex++;
+            }
+            
+            // Reset after 0.7 seconds
+            timeoutIds.push(setTimeout(() => {
+                copyBackBtn.classList.remove('copied');
+                isProcessing = false;
+                updateUI();
+            }, 700));
+        }
+
+        // Reset to the first item
+        function startOver() {
+            clearAllTimeouts();
+            currentIndex = 0;
+            isProcessing = false;
+            copyStatus.className = 'copy-status';
+            copyNextBtn.classList.remove('copied');
+            copyBackBtn.classList.remove('copied');
+            updateUI();
+            showNotification('Ready to start copying from the beginning', 'success');
+        }
+
+        // Add leading zeros to numbers that don't have them and clean data
+        function addLeadingZeros() {
+            if (isProcessing) return;
+            
+            if (dataInput.value.trim() === '') {
+                showNotification('No data to process. Please paste some data first.', 'error');
+                return;
+            }
+
+            isProcessing = true;
+            updateUI();
+            
+            // First clean the data (remove empty rows)
+            const cleanedItems = cleanData(dataInput.value.split(/\r\n|\n|\r/));
+            let modifiedCount = 0;
+            
+            const newItems = cleanedItems.map(item => {
+                // Only process items that look like numbers
+                if (/^\d+$/.test(item)) {
+                    // If the number doesn't start with 0, add one
+                    if (!item.startsWith('0')) {
+                        modifiedCount++;
+                        return '0' + item;
+                    }
+                }
+                return item;
+            });
+
+            items = newItems;
+            dataInput.value = items.join('\n');
+            
+            // Update the UI with cleaned data
+            currentIndex = 0;
+            
+            isProcessing = false;
+            showNotification(`Added leading zeros to ${modifiedCount} items and removed empty rows`, 'success');
+            updateUI();
+        }
+
+        // Update the UI based on current state
+        function updateUI() {
+            // Update counter displays
+            currentItemDisplay.textContent = currentIndex < items.length ? `#${currentIndex}` : '-';
+            totalItemsDisplay.textContent = items.length;
+            remainingItemsDisplay.textContent = Math.max(0, items.length - currentIndex);
+            
+            // Update button states
+            copyNextBtn.disabled = isProcessing || currentIndex >= items.length;
+            copyBackBtn.disabled = isProcessing || currentIndex <= 0;
+            startOverBtn.disabled = isProcessing || items.length === 0 || currentIndex === 0;
+            addZerosBtn.disabled = isProcessing;
+            
+            // Update button text
+            copyNextBtn.innerHTML = `<i class="fas fa-arrow-right"></i> Copy Next (#${currentIndex})`;
+        }
+
+        // Show notification message
+        function showNotification(message, type) {
+            notificationText.textContent = message;
+            notification.className = 'notification show';
+            
+            if (type === 'success') {
+                notification.classList.add('success');
+                notification.classList.remove('error');
+            } else if (type === 'error') {
+                notification.classList.add('error');
+                notification.classList.remove('success');
+            }
+            
+            // Hide notification after 3 seconds
+            timeoutIds.push(setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000));
+        }
+
+        // Handle keyboard shortcuts
+        function handleKeyDown(e) {
+            // Ctrl+Enter for Copy Next
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                if (!copyNextBtn.disabled) copyNextBtn.click();
+            }
+            
+            // Ctrl+Backspace for Copy Back
+            if (e.ctrlKey && e.key === 'Backspace') {
+                e.preventDefault();
+                if (!copyBackBtn.disabled) copyBackBtn.click();
+            }
+        }
+
+        // Initialize the tool when the page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
